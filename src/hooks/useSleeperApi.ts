@@ -20,7 +20,42 @@ export const useSleeperApi = () => {
     }
   };
 
+  const callGroup = async <T>(fns: (() => Promise<T>)[], successMsg: string, errorMsg: string): Promise<(T | null)[]> => {
+    openLoading();
+    try {
+      const results = await Promise.all(fns.map((fn) => fn().catch(() => null)));
+      const allSucceeded = results.every((r) => r !== null);
+      openSnack(allSucceeded ? successMsg : errorMsg, allSucceeded ? "success" : "error");
+      return results;
+    } finally {
+      closeLoading();
+    }
+  };
+
+  const runInBatches = async <T>(fns: (() => Promise<T>)[], batchSize = 20): Promise<(T | null)[]> => {
+    const results: (T | null)[] = [];
+    for (let i = 0; i < fns.length; i += batchSize) {
+      const batch = fns.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch.map((fn) => fn().catch(() => null)));
+      results.push(...batchResults);
+    }
+    return results;
+  };
+
   return {
+    callGroup,
+    runInBatches,
+
+    //-------------/
+
+    getRosters: (leagueId: string) => sleeperApi.getRosters(leagueId),
+
+    getLeagueUsers: (leagueId: string) => sleeperApi.getLeagueUsers(leagueId),
+
+    getTransactions: (leagueId: string, round: number) => sleeperApi.getTransactions(leagueId, round),
+
+    //-------------/
+
     // Users
     getUser: (id: string) => call(() => sleeperApi.getUser(id), "Usuário obtido com sucesso", "Erro ao obter usuário"),
 
@@ -29,16 +64,6 @@ export const useSleeperApi = () => {
       call(() => sleeperApi.getLeaguesForUser(userId, sport, season), "Ligas carregadas com sucesso", "Erro ao obter ligas"),
 
     getLeague: (leagueId: string) => call(() => sleeperApi.getLeague(leagueId), "Liga obtida com sucesso", "Erro ao obter liga"),
-
-    getRosters: (leagueId: string) =>
-      call(() => sleeperApi.getRosters(leagueId), "Rosters carregados com sucesso", "Erro ao obter rosters"),
-
-    getLeagueUsers: (leagueId: string) =>
-      call(
-        () => sleeperApi.getLeagueUsers(leagueId),
-        "Usuários da liga carregados com sucesso",
-        "Erro ao obter usuários da liga"
-      ),
 
     getMatchups: (leagueId: string, week: number) =>
       call(
@@ -56,13 +81,6 @@ export const useSleeperApi = () => {
 
     getLosersBracket: (leagueId: string) =>
       call(() => sleeperApi.getLosersBracket(leagueId), "Chave perdedora carregada com sucesso", "Erro ao obter chave perdedora"),
-
-    getTransactions: (leagueId: string, round: number) =>
-      call(
-        () => sleeperApi.getTransactions(leagueId, round),
-        `Transações da rodada ${round} carregadas com sucesso`,
-        "Erro ao obter transações"
-      ),
 
     getTradedPicks: (leagueId: string) =>
       call(

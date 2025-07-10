@@ -35,6 +35,7 @@ export const SnackbarProvider = ({ children }: SnackbarProviderProps) => {
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error" | "warning">("success");
 
   const openSnack = (message: string, severity: "success" | "error" | "warning") => {
+    console.log(message);
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setOpenSnackbar(true);
