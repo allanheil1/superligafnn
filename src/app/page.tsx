@@ -6,6 +6,7 @@ import { useSleeperApi } from "../hooks/useSleeperApi";
 import { Ligas, LeagueInfo } from "../ligas";
 import { LeagueUser, Roster, Transaction, Matchup } from "../api/sleeper/types";
 import { useSnackbarContext } from "../context/SnackbarContext";
+import SearchInput from "./search"; // ajuste o caminho conforme necessário
 
 interface TableSuperLigaRow {
   id: string;
@@ -19,8 +20,7 @@ interface TableSuperLigaRow {
   pt: number;
   trades: number;
   waivers: number;
-  // Assinatura de índice para colunas dinâmicas de pontuação
-  [key: `week_${number}`]: number | string;
+  [key: `week_${number}`]: string | number;
 }
 
 const SuperLigaPage: React.FC = () => {
@@ -28,75 +28,55 @@ const SuperLigaPage: React.FC = () => {
   const { openSnack, openLoading, closeLoading, isLoading } = useSnackbarContext();
   const [rows, setRows] = useState<TableSuperLigaRow[]>([]);
   const [filterText, setFilterText] = useState("");
+  const [appliedFilterText, setAppliedFilterText] = useState("");
 
-  // --- Função para Montar a Lista de Ligas ---
   const getLeagueInfos = useCallback((): LeagueInfo[] => {
     const leagueInfos: LeagueInfo[] = [];
-    // Bronze
     for (let i = 9; i <= 88; i++) {
       try {
         leagueInfos.push(Ligas.bronze(i));
-      } catch (e) {
-        /* Ignorado */
-      }
+      } catch (e) {}
     }
-    // Cobre
     for (let i = 45; i <= 55; i++) {
       try {
         leagueInfos.push(Ligas.cobre(i));
-      } catch (e) {
-        /* Ignorado */
-      }
+      } catch (e) {}
     }
-    // Prata
     [58, 8, 7, 6, 5, 4, 3, 2].forEach((i) => {
       try {
         leagueInfos.push(Ligas.prata(i));
-      } catch (e) {
-        /* Ignorado */
-      }
+      } catch (e) {}
     });
-    // Ouro
     try {
       leagueInfos.push(Ligas.ouro(1));
-    } catch (e) {
-      /* Ignorado */
-    }
-    // Creators
+    } catch (e) {}
     leagueInfos.push(Ligas.creators());
     return leagueInfos;
   }, []);
 
-  // --- Função para Buscar Usuários das Ligas ---
   const fetchLeagueUsers = (leagueInfos: LeagueInfo[]): Promise<(LeagueUser[] | null)[]> => {
-    const userPromises = leagueInfos.map(
-      (info) => api.getLeagueUsers(info.id).catch(() => null) // Adiciona um .catch para não quebrar o Promise.all
-    );
-    return Promise.all(userPromises);
+    return Promise.all(leagueInfos.map((info) => api.getLeagueUsers(info.id).catch(() => null)));
   };
 
-  // --- Função para Buscar Rosters das Ligas ---
   const fetchLeagueRosters = (leagueInfos: LeagueInfo[]): Promise<(Roster[] | null)[]> => {
-    const rosterPromises = leagueInfos.map((info) => api.getRosters(info.id).catch(() => null));
-    return Promise.all(rosterPromises);
+    return Promise.all(leagueInfos.map((info) => api.getRosters(info.id).catch(() => null)));
   };
 
-  // --- Função para Buscar Transações ---
   const fetchLeagueTransactions = async (
     leagueInfos: LeagueInfo[]
   ): Promise<Record<string, Record<string, { trades: number; waivers: number }>>> => {
     const transactionCalls: { leagueId: string; fn: () => Promise<Transaction[] | null> }[] = [];
+
     leagueInfos.forEach((info) => {
       for (let week = 1; week <= 18; week++) {
-        transactionCalls.push({
-          leagueId: info.id,
-          fn: () => api.getTransactions(info.id, week),
-        });
+        transactionCalls.push({ leagueId: info.id, fn: () => api.getTransactions(info.id, week) });
       }
     });
 
-    const transactionFns = transactionCalls.map((c) => c.fn);
-    const allTransactionsArrays = await api.runInBatches<Transaction[] | null>(transactionFns, 50);
+    const allTransactionsArrays = await api.runInBatches<Transaction[] | null>(
+      transactionCalls.map((c) => c.fn),
+      50
+    );
 
     const flatTransactionsWithLeague: Array<{ leagueId: string; tx: Transaction }> = [];
     allTransactionsArrays.forEach((transactions, index) => {
@@ -115,67 +95,77 @@ const SuperLigaPage: React.FC = () => {
       if (!transactionCounts[leagueId][actorId]) {
         transactionCounts[leagueId][actorId] = { trades: 0, waivers: 0 };
       }
-      if (tx.type === "trade") {
-        transactionCounts[leagueId][actorId].trades += 1;
-      }
-      if (tx.type === "waiver") {
-        transactionCounts[leagueId][actorId].waivers += 1;
-      }
+      if (tx.type === "trade") transactionCounts[leagueId][actorId].trades += 1;
+      if (tx.type === "waiver") transactionCounts[leagueId][actorId].waivers += 1;
     });
 
     return transactionCounts;
   };
 
-  // --- Função para buscar todos os matchups de todas as ligas ---
   const fetchLeagueMatchups = async (
     leagueInfos: LeagueInfo[]
-  ): Promise<Record<string, Record<string, Record<number, number>>>> => {
+  ): Promise<Record<string, Record<string, Record<number, { points: number; result: "W" | "L" | "T" }>>>> => {
     const matchupCalls: { leagueId: string; week: number; fn: () => Promise<Matchup[] | null> }[] = [];
 
     leagueInfos.forEach((info) => {
       for (let week = 1; week <= 18; week++) {
-        matchupCalls.push({
-          leagueId: info.id,
-          week: week,
-          fn: () => api.getMatchups(info.id, week),
-        });
+        matchupCalls.push({ leagueId: info.id, week, fn: () => api.getMatchups(info.id, week) });
       }
     });
 
-    const matchupFns = matchupCalls.map((c) => c.fn);
-    const allMatchupsArrays = await api.runInBatches<Matchup[] | null>(matchupFns, 50);
+    const allMatchupsArrays = await api.runInBatches<Matchup[] | null>(
+      matchupCalls.map((c) => c.fn),
+      50
+    );
 
-    const matchupScores: Record<string, Record<string, Record<number, number>>> = {};
+    const matchupScores: Record<string, Record<string, Record<number, { points: number; result: "W" | "L" | "T" }>>> = {};
+    const matchupsGrouped: Record<string, Record<number, Matchup[]>> = {};
 
     allMatchupsArrays.forEach((matchups, index) => {
       if (!matchups) return;
-
       const { leagueId, week } = matchupCalls[index];
-
-      if (!matchupScores[leagueId]) {
-        matchupScores[leagueId] = {};
-      }
-
-      matchups.forEach((matchup) => {
-        const rosterId = String(matchup.roster_id);
-        if (!matchupScores[leagueId][rosterId]) {
-          matchupScores[leagueId][rosterId] = {};
-        }
-        matchupScores[leagueId][rosterId][week] = matchup.points;
-      });
+      if (!matchupsGrouped[leagueId]) matchupsGrouped[leagueId] = {};
+      if (!matchupsGrouped[leagueId][week]) matchupsGrouped[leagueId][week] = [];
+      matchupsGrouped[leagueId][week].push(...matchups);
     });
+
+    for (const leagueId in matchupsGrouped) {
+      if (!matchupScores[leagueId]) matchupScores[leagueId] = {};
+
+      for (const weekStr in matchupsGrouped[leagueId]) {
+        const week = Number(weekStr);
+        const matchups = matchupsGrouped[leagueId][week];
+        const byMatchupId: Record<number, Matchup[]> = {};
+        matchups.forEach((m) => {
+          if (!byMatchupId[m.matchup_id]) byMatchupId[m.matchup_id] = [];
+          byMatchupId[m.matchup_id].push(m);
+        });
+
+        for (const matchupId in byMatchupId) {
+          const [a, b] = byMatchupId[matchupId];
+          if (!a || !b) continue;
+
+          const resultA: "W" | "L" | "T" = a.points > b.points ? "W" : a.points < b.points ? "L" : "T";
+          const resultB: "W" | "L" | "T" = b.points > a.points ? "W" : b.points < a.points ? "L" : "T";
+
+          if (!matchupScores[leagueId][a.roster_id]) matchupScores[leagueId][a.roster_id] = {};
+          if (!matchupScores[leagueId][b.roster_id]) matchupScores[leagueId][b.roster_id] = {};
+
+          matchupScores[leagueId][a.roster_id][week] = { points: a.points, result: resultA };
+          matchupScores[leagueId][b.roster_id][week] = { points: b.points, result: resultB };
+        }
+      }
+    }
 
     return matchupScores;
   };
 
-  // --- Função Principal para Gerenciar o Fetch e Montar a Tabela ---
   const handleFetchData = async () => {
     openLoading();
     setRows([]);
 
     try {
       const leagueInfos = getLeagueInfos();
-
       const [rostersByLeague, usersByLeagueArray, transactionCounts, matchupScores] = await Promise.all([
         fetchLeagueRosters(leagueInfos),
         fetchLeagueUsers(leagueInfos),
@@ -193,13 +183,15 @@ const SuperLigaPage: React.FC = () => {
         const users = usersByLeagueMap[info.id];
 
         return rosters.map((r) => {
-          const user = users?.find((u) => u.user_id === r.owner_id);
-          const transactionStats = transactionCounts[info.id]?.[user?.user_id || ""] ?? { trades: 0, waivers: 0 };
+          const user = users.find((u) => u.user_id === r.owner_id);
+          const tx = transactionCounts[info.id]?.[user?.user_id || ""] ?? { trades: 0, waivers: 0 };
 
-          const weeklyScores: { [key: string]: number } = {};
+          const weeklyScores: Record<string, string> = {};
           const scoresForRoster = matchupScores[info.id]?.[r.roster_id] ?? {};
+
           for (let week = 1; week <= 18; week++) {
-            weeklyScores[`week_${week}`] = scoresForRoster[week] ?? 0;
+            const data = scoresForRoster[week];
+            weeklyScores[`week_${week}`] = data ? `${data.points.toFixed(2)}${data.result}` : "N/A";
           }
 
           return {
@@ -212,8 +204,8 @@ const SuperLigaPage: React.FC = () => {
             losses: r.settings?.losses ?? 0,
             pf: r.settings?.fpts ?? 0,
             pt: r.settings?.fpts_against ?? 0,
-            trades: transactionStats.trades,
-            waivers: transactionStats.waivers,
+            trades: tx.trades,
+            waivers: tx.waivers,
             ...weeklyScores,
           };
         });
@@ -229,27 +221,32 @@ const SuperLigaPage: React.FC = () => {
     }
   };
 
-  // --- Lógica de filtragem ---
   const filteredRows = useMemo(() => {
-    const lowercasedFilter = filterText.toLowerCase();
-    if (!lowercasedFilter) {
-      return rows;
-    }
+    const filter = appliedFilterText.toLowerCase();
+    return filter ? rows.filter((row) => Object.values(row).some((v) => String(v).toLowerCase().includes(filter))) : rows;
+  }, [rows, appliedFilterText]);
 
-    return rows.filter((row) => {
-      return Object.values(row).some((value) => String(value).toLowerCase().includes(lowercasedFilter));
-    });
-  }, [rows, filterText]);
-
-  // --- Definição das Colunas ---
   const staticColumns: GridColDef<TableSuperLigaRow>[] = [
     { field: "league", headerName: "Liga", width: 200 },
     { field: "team", headerName: "Time", width: 200 },
     { field: "user_name", headerName: "Nome Jogador", width: 150 },
-    { field: "wins", headerName: "V", width: 60, type: "number" },
-    { field: "losses", headerName: "D", width: 60, type: "number" },
+    {
+      field: "wins",
+      headerName: "Vitórias",
+      width: 120,
+      type: "number",
+      renderCell: (params) => <strong style={{ color: "green" }}>{params.value}</strong>,
+    },
+    {
+      field: "losses",
+      headerName: "Derrotas",
+      width: 120,
+      type: "number",
+      renderCell: (params) => <strong style={{ color: "red" }}>{params.value}</strong>,
+    },
+
     { field: "pf", headerName: "PF", width: 120, type: "number" },
-    { field: "pt", headerName: "PC", width: 120, type: "number" },
+    { field: "pt", headerName: "PT", width: 120, type: "number" },
     { field: "waivers", headerName: "Waivers", width: 100, type: "number" },
     { field: "trades", headerName: "Trades", width: 100, type: "number" },
   ];
@@ -260,31 +257,44 @@ const SuperLigaPage: React.FC = () => {
       field: `week_${week}`,
       headerName: `W${week}`,
       width: 100,
-      type: "number",
+      sortable: true,
+      sortComparator: (v1, v2) => {
+        const parseScore = (val: any): number => {
+          const str = String(val);
+          const match = str.match(/^(\d+\.\d{2})/);
+          return match ? parseFloat(match[1]) : 0;
+        };
+
+        return parseScore(v1) - parseScore(v2);
+      },
+      renderCell: (params) => {
+        const raw = String(params.value);
+        const match = raw.match(/^(\d+\.\d{2})([WLT])$/);
+
+        if (!match) return raw;
+
+        const [_, points, result] = match;
+        const color = result === "W" ? "green" : result === "L" ? "red" : "gray";
+        return (
+          <span>
+            {points} <strong style={{ color }}>({result})</strong>
+          </span>
+        );
+      },
     });
   }
 
   const columns: GridColDef<TableSuperLigaRow>[] = [...staticColumns, ...weeklyScoreColumns];
 
-  // --- Renderização do Componente ---
   return (
     <Box p={2}>
       <Typography variant="h4" gutterBottom>
-        Super Liga Rosters
+        Super Liga 2025
       </Typography>
       <Button variant="contained" onClick={handleFetchData} disabled={isLoading}>
         {isLoading ? "Buscando..." : "Buscar Dados Super Liga"}
       </Button>
-
-      <Box sx={{ my: 2 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-          label="Filtrar em todas as colunas..."
-        />
-      </Box>
+      <SearchInput onApply={(text) => setAppliedFilterText(text)} />
 
       <Box mt={2} sx={{ height: "75vh", width: "100%" }}>
         <DataGrid rows={filteredRows} columns={columns} loading={isLoading} getRowId={(row) => row.id} />
