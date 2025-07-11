@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useCallback } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import React, { useState, useCallback, useMemo } from "react";
+import { Box, Button, Typography, TextField } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useSleeperApi } from "../hooks/useSleeperApi";
 import { Ligas, LeagueInfo } from "../ligas";
@@ -25,6 +25,8 @@ const SuperLigaPage: React.FC = () => {
   const api = useSleeperApi();
   const { openSnack, openLoading, closeLoading, isLoading } = useSnackbarContext();
   const [rows, setRows] = useState<TableSuperLigaRow[]>([]);
+  // NOVO: Estado para armazenar o texto do filtro
+  const [filterText, setFilterText] = useState("");
 
   // --- Função para Montar a Lista de Ligas ---
   const getLeagueInfos = useCallback((): LeagueInfo[] => {
@@ -178,6 +180,19 @@ const SuperLigaPage: React.FC = () => {
     }
   };
 
+  const filteredRows = useMemo(() => {
+    const lowercasedFilter = filterText.toLowerCase();
+    if (!lowercasedFilter) {
+      return rows; // Se não houver filtro, retorna todas as linhas
+    }
+
+    return rows.filter((row) => {
+      // Itera sobre todos os valores do objeto da linha
+      // e verifica se algum deles inclui o texto do filtro
+      return Object.values(row).some((value) => String(value).toLowerCase().includes(lowercasedFilter));
+    });
+  }, [rows, filterText]);
+
   const columns: GridColDef<TableSuperLigaRow>[] = [
     { field: "league", headerName: "Liga", width: 200 },
     { field: "team", headerName: "Time", width: 200 },
@@ -186,7 +201,7 @@ const SuperLigaPage: React.FC = () => {
     { field: "wins", headerName: "Vitórias", width: 100, type: "number" },
     { field: "losses", headerName: "Derrotas", width: 100, type: "number" },
     { field: "pf", headerName: "PF", width: 120, type: "number" },
-    { field: "pt", headerName: "PC", width: 120, type: "number" },
+    { field: "pt", headerName: "PT", width: 120, type: "number" },
     { field: "waivers", headerName: "Waivers", width: 100, type: "number" },
     { field: "trades", headerName: "Trades", width: 100, type: "number" },
   ];
@@ -199,8 +214,19 @@ const SuperLigaPage: React.FC = () => {
       <Button variant="contained" onClick={handleFetchData} disabled={isLoading}>
         {isLoading ? "Buscando..." : "Buscar Dados Super Liga"}
       </Button>
+
+      <Box sx={{ my: 2 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          label="Pesquisar na tabela..."
+        />
+      </Box>
+
       <Box mt={2} sx={{ height: "75vh", width: "100%" }}>
-        <DataGrid rows={rows} columns={columns} loading={isLoading} getRowId={(row) => row.id} />
+        <DataGrid rows={filteredRows} columns={columns} loading={isLoading} getRowId={(row) => row.id} />
       </Box>
     </Box>
   );
