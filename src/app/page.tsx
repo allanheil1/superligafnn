@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Box, Button, Typography, TextField } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useSleeperApi } from "../hooks/useSleeperApi";
@@ -191,7 +191,7 @@ const SuperLigaPage: React.FC = () => {
 
           for (let week = 1; week <= 18; week++) {
             const data = scoresForRoster[week];
-            weeklyScores[`week_${week}`] = data ? `${data.points.toFixed(2)}${data.result}` : "N/A";
+            weeklyScores[`week_${week}`] = data ? `${data.points.toFixed(2)}${data.result}` : "Bye";
           }
 
           return {
@@ -286,6 +286,9 @@ const SuperLigaPage: React.FC = () => {
 
   const columns: GridColDef<TableSuperLigaRow>[] = [...staticColumns, ...weeklyScoreColumns];
 
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => setHasMounted(true), []);
+
   return (
     <Box p={2}>
       <Typography variant="h4" gutterBottom>
@@ -297,7 +300,7 @@ const SuperLigaPage: React.FC = () => {
       <SearchInput onApply={(text) => setAppliedFilterText(text)} />
 
       <Box mt={2} sx={{ height: "75vh", width: "100%" }}>
-        <DataGrid rows={filteredRows} columns={columns} loading={isLoading} getRowId={(row) => row.id} />
+        {hasMounted && <DataGrid rows={filteredRows} columns={columns} loading={isLoading} getRowId={(row) => row.id} />}
       </Box>
     </Box>
   );
