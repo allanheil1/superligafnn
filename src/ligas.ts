@@ -1,5 +1,3 @@
-// src/constants/ligas.ts
-
 /**
  * Categorias de ligas disponíveis.
  */
