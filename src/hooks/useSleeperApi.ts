@@ -22,5 +22,7 @@ export const useSleeperApi = () => {
     getTransactions: (leagueId: string, round: number) => sleeperApi.getTransactions(leagueId, round),
 
     getMatchups: (leagueId: string, week: number) => sleeperApi.getMatchups(leagueId, week),
+
+    fetchAllPlayers: () => sleeperApi.fetchAllPlayers(),
   };
 };
