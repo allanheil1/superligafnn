@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import { GridColDef } from "@mui/x-data-grid";
 import { useSleeperApi } from "../hooks/useSleeperApi";
 import { Ligas, LeagueInfo } from "../ligas";
-import { LeagueUser, Roster, Transaction, Matchup, PlayerMap } from "../api/sleeper/types";
+import { LeagueUser, Roster, Transaction, Matchup, PlayerMap, SportState } from "../api/sleeper/types";
 import { useSnackbarContext } from "../context/SnackbarContext";
 import { getSlpChange } from "../../public/data/SLPrules";
 import { Tooltip } from "@mui/material";
@@ -53,6 +53,24 @@ export const useSuperLigaData = () => {
   const [tradesLoaded, setTradesLoaded] = useState(false);
 
   const [initialSlpMap, setInitialSlpMap] = useState<Record<string, number>>({});
+
+  const [nflState, setNflState] = useState<SportState | null>(null);
+
+  useEffect(() => {
+    const loadState = async () => {
+      openLoading();
+      try {
+        const state = await api.getNflState();
+        setNflState(state);
+      } catch (e) {
+        openSnack("Erro ao buscar NFL state.", "error");
+        console.error(e);
+      } finally {
+        closeLoading();
+      }
+    };
+    loadState();
+  }, []);
 
   // Carrega CSV de SLP inicial
   useEffect(() => {
@@ -564,5 +582,6 @@ export const useSuperLigaData = () => {
     hasMounted,
     tradeCards,
     tradesLoaded,
+    nflState,
   };
 };

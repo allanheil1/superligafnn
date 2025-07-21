@@ -15,3 +15,9 @@ declare module "@mui/material/Button" {
     amareloForteSL: true;
   }
 }
+
+declare module "@mui/material/Checkbox" {
+  interface CheckboxPropsColorOverrides {
+    amareloForteSL: true;
+  }
+}

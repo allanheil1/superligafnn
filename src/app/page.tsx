@@ -17,6 +17,7 @@ const SuperLigaPage: React.FC = () => {
     hasMounted,
     tradeCards,
     tradesLoaded,
+    nflState,
   } = useSuperLigaData();
 
   return (
@@ -38,6 +39,7 @@ const SuperLigaPage: React.FC = () => {
           setAppliedFilterText={setAppliedFilterText}
           isLoading={isLoading}
           hasMounted={hasMounted}
+          nflState={nflState}
         />
       ) : (
         <AbaTrades tradeCards={tradeCards} />

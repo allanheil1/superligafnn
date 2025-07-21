@@ -19,18 +19,18 @@ const SearchInput: React.FC<SearchInputProps> = ({ onApply }) => {
       <TextField
         fullWidth
         variant="outlined"
-        label="Pesquisar na tabela..."
+        label="Pesquisar na tabela...     "
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        size="small"
+        size="medium"
         margin="dense"
         slotProps={{
           root: {
             sx: {
-              height: 38,
+              height: 48,
               "& .MuiInputLabel-root": {
-                fontSize: "14px",
+                fontSize: "16px",
               },
             },
           },

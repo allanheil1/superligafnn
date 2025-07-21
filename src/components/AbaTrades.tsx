@@ -10,7 +10,7 @@ interface AbaTradesProps {
 
 const AbaTrades: React.FC<AbaTradesProps> = ({ tradeCards }) => {
   return (
-    <Box display="flex" flexWrap="wrap" gap={2} mt={2}>
+    <Box display="flex" flexWrap="wrap" justifyContent={"center"} gap={2}>
       {tradeCards.map((card, index) => (
         <TradeCard key={index} card={card} index={index} />
       ))}

@@ -24,5 +24,7 @@ export const useSleeperApi = () => {
     getMatchups: (leagueId: string, week: number) => sleeperApi.getMatchups(leagueId, week),
 
     fetchAllPlayers: () => sleeperApi.fetchAllPlayers(),
+
+    getNflState: () => sleeperApi.getSportState("nfl"),
   };
 };

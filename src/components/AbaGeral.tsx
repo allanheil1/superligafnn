@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { Box, Button, Tooltip } from "@mui/material";
+import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutline";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import SearchInput from "./SearchInput";
 import { TableSuperLigaRow } from "../hooks/useSuperLigaData";
@@ -12,6 +13,7 @@ interface AbaGeralProps {
   setAppliedFilterText: (text: string) => void;
   isLoading: boolean;
   hasMounted: boolean;
+  nflState: any;
 }
 
 const AbaGeral: React.FC<AbaGeralProps> = ({
@@ -21,6 +23,7 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
   setAppliedFilterText,
   isLoading,
   hasMounted,
+  nflState,
 }) => {
   // Exportar CSV
   const handleExport = () => {
@@ -60,6 +63,32 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
             Exportar para CSV
           </Button>
         </Tooltip>
+        <Tooltip
+          enterDelay={300}
+          placement="right"
+          title={
+            <Box>
+              {nflState &&
+                Object.entries(nflState).map(([key, val]) => (
+                  <Typography key={key} component="div" sx={{ fontSize: "0.875rem" }}>
+                    {key}: {val?.toString()}
+                  </Typography>
+                ))}
+            </Box>
+          }
+          slotProps={{
+            tooltip: {
+              sx: {
+                fontSize: "0.975rem",
+                whiteSpace: "normal",
+              },
+            },
+          }}
+        >
+          <IconButton aria-label="informação NFL State" sx={{ width: 20, height: 20, p: 0 }}>
+            <InfoOutlinedIcon color="primary" sx={{ fontSize: 30, mt: 2 }} />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       <SearchInput onApply={(text) => setAppliedFilterText(text)} />
@@ -82,7 +111,6 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
             loading={isLoading}
             getRowId={(row) => row.id}
             pageSizeOptions={[12, 50, 100]}
-            sx={{ backgroundColor: "transparent" }}
           />
         )}
       </Box>
