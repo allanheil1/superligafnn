@@ -6,6 +6,7 @@ import { Ligas, LeagueInfo } from "../ligas";
 import { LeagueUser, Roster, Transaction, Matchup, PlayerMap } from "../api/sleeper/types";
 import { useSnackbarContext } from "../context/SnackbarContext";
 import { getSlpChange } from "../../public/data/SLPrules";
+import { Tooltip } from "@mui/material";
 
 export type TableSuperLigaRow = {
   id: string;
@@ -336,8 +337,31 @@ export const useSuperLigaData = () => {
   }, [rows, appliedFilterText]);
 
   const staticColumns: GridColDef<TableSuperLigaRow>[] = [
-    { field: "league", headerName: "Liga", width: 200, headerAlign: "left", align: "left" },
-    { field: "initial_slp", headerName: "SLP Inicial", width: 120, type: "number", headerAlign: "left", align: "left" },
+    {
+      field: "league",
+      headerName: "Liga",
+      width: 200,
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Nome da liga ao qual o time pertence">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      field: "initial_slp",
+      headerName: "SLP Inicial",
+      width: 120,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Super Liga Points no início da temporada de 2025">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
     {
       field: "current_slp",
       headerName: "SLP Atual",
@@ -365,9 +389,36 @@ export const useSuperLigaData = () => {
           </span>
         );
       },
+      renderHeader: (params) => (
+        <Tooltip title="Super Liga Points atual (+/- diferença em relação ao inicial)">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
     },
-    { field: "team", headerName: "Time", width: 200, headerAlign: "left", align: "left" },
-    { field: "user_name", headerName: "Nome Jogador", width: 150, headerAlign: "left", align: "left" },
+    {
+      field: "team",
+      headerName: "Time",
+      width: 200,
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Nome do time no sleeper">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      field: "user_name",
+      headerName: "Nome Jogador",
+      width: 150,
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Nome do usuário dono do time no sleeper">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
     {
       field: "wins",
       headerName: "Vitórias",
@@ -376,6 +427,11 @@ export const useSuperLigaData = () => {
       renderCell: (params) => <strong style={{ color: "green" }}>{params.value}</strong>,
       headerAlign: "left",
       align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Numéro de vitórias">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
     },
     {
       field: "losses",
@@ -385,11 +441,64 @@ export const useSuperLigaData = () => {
       renderCell: (params) => <strong style={{ color: "red" }}>{params.value}</strong>,
       headerAlign: "left",
       align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Numéro de derrotas">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
     },
-    { field: "pf", headerName: "PF", width: 120, type: "number", headerAlign: "left", align: "left" },
-    { field: "pt", headerName: "PT", width: 120, type: "number", headerAlign: "left", align: "left" },
-    { field: "waivers", headerName: "Waivers", width: 100, type: "number", headerAlign: "left", align: "left" },
-    { field: "trades", headerName: "Trades", width: 100, type: "number", headerAlign: "left", align: "left" },
+    {
+      field: "pf",
+      headerName: "PF",
+      width: 120,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Pontos feitos totais na temporada">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      field: "pt",
+      headerName: "PT",
+      width: 120,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Pontos tomados totais na temporada">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      field: "waivers",
+      headerName: "Waivers",
+      width: 100,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Quantidade de operações do tipo Waiver realizadas">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      field: "trades",
+      headerName: "Trades",
+      width: 100,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
+      renderHeader: (params) => (
+        <Tooltip title="Quantidade de operações do tipo Trade realizadas">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
+    },
   ];
 
   const weeklyScoreColumns: GridColDef<TableSuperLigaRow>[] = [];
@@ -430,6 +539,11 @@ export const useSuperLigaData = () => {
           </div>
         );
       },
+      renderHeader: (params) => (
+        <Tooltip title="Pontos feitos na semana (W: Vitória / L: Derrota) /// SLP atual (+/- SLP ganhos ou perdidos na semana)">
+          <span>{params.colDef.headerName}</span>
+        </Tooltip>
+      ),
     });
   }
 

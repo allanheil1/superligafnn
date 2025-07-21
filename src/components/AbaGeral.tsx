@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Box, Button } from "@mui/material";
+import { Box, Button, Tooltip } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import SearchInput from "./SearchInput";
 import { TableSuperLigaRow } from "../hooks/useSuperLigaData";
@@ -50,17 +50,31 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
   return (
     <>
       <Box mb={2} sx={{ display: "flex", gap: 2 }}>
-        <Button variant="contained" onClick={handleFetchData} disabled={isLoading}>
-          {isLoading ? "Buscando..." : "Buscar Dados Super Liga"}
-        </Button>
-        <Button color="success" variant="outlined" onClick={handleExport} disabled={isLoading || !filteredRows.length}>
-          Exportar para CSV
-        </Button>
+        <Tooltip enterDelay={300} enterNextDelay={300} title={"Dispara requisições para a API do sleeper"}>
+          <Button variant="contained" onClick={handleFetchData} disabled={isLoading}>
+            {isLoading ? "Buscando..." : "Buscar Dados Super Liga"}
+          </Button>
+        </Tooltip>
+        <Tooltip enterDelay={300} enterNextDelay={300} title={"Download de arquivo .csv"}>
+          <Button color="amareloForteSL" variant="contained" onClick={handleExport} disabled={isLoading || !filteredRows.length}>
+            Exportar para CSV
+          </Button>
+        </Tooltip>
       </Box>
 
       <SearchInput onApply={(text) => setAppliedFilterText(text)} />
 
-      <Box mt={2} sx={{ height: "75vh", width: "100%" }}>
+      <Box
+        mt={2}
+        sx={{
+          height: "75vh",
+          width: "100%",
+          "& .MuiDataGrid-root, .MuiDataGrid-cell, .MuiDataGrid-columnHeaders, .MuiDataGrid-virtualScroller, .MuiDataGrid-footerContainer":
+            {
+              backgroundColor: "transparent",
+            },
+        }}
+      >
         {hasMounted && (
           <DataGrid
             rows={filteredRows}
@@ -68,6 +82,7 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
             loading={isLoading}
             getRowId={(row) => row.id}
             pageSizeOptions={[12, 50, 100]}
+            sx={{ backgroundColor: "transparent" }}
           />
         )}
       </Box>
