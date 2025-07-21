@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Box, Tabs, Tab } from "@mui/material";
+import { Box, Tabs, Tab, Tooltip } from "@mui/material";
 import AbaGeral from "../components/AbaGeral";
 import AbaTrades from "../components/AbaTrades";
 import { useSuperLigaData } from "../hooks/useSuperLigaData";
@@ -23,7 +23,9 @@ const SuperLigaPage: React.FC = () => {
   return (
     <Box p={2}>
       <Box display="flex" justifyContent="start">
-        <img src="/images/colored-logo.png" alt="Super Liga 2025 Logo" style={{ width: 50, height: 50 }} />
+        <Tooltip title="Super Liga de Fantasy 2025">
+          <img src="/images/colored-logo.png" alt="Super Liga 2025 Logo" style={{ width: 50, height: 50 }} />
+        </Tooltip>
 
         <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 2 }}>
           <Tab label="Visão Geral" value="grid" />

@@ -10,6 +10,7 @@ const theme = createTheme({
     amareloForteSL: {
       main: "#F6A415",
       dark: "#B77707",
+      contrastText: "#0F3063",
     },
   },
   components: {

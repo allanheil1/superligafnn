@@ -54,8 +54,13 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
     <>
       <Box mb={2} sx={{ display: "flex", gap: 2 }}>
         <Tooltip enterDelay={300} enterNextDelay={300} title={"Dispara requisições para a API do sleeper"}>
-          <Button variant="contained" onClick={handleFetchData} disabled={isLoading}>
-            {isLoading ? "Buscando..." : "Buscar Dados Super Liga"}
+          <Button
+            variant="contained"
+            onClick={handleFetchData}
+            disabled={isLoading}
+            endIcon={!isLoading ? <img src="/images/sleeper-logo.png" alt="Logo" style={{ width: 18, height: 18 }} /> : <></>}
+          >
+            {isLoading ? "Buscando..." : "Buscar Dados Sleeper"}
           </Button>
         </Tooltip>
         <Tooltip enterDelay={300} enterNextDelay={300} title={"Download de arquivo .csv"}>
@@ -111,6 +116,9 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
             loading={isLoading}
             getRowId={(row) => row.id}
             pageSizeOptions={[12, 50, 100]}
+            localeText={{
+              noRowsLabel: "Nenhum resultado encontrado",
+            }}
           />
         )}
       </Box>

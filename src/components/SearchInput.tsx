@@ -31,6 +31,7 @@ const SearchInput: React.FC<SearchInputProps> = ({ onApply }) => {
               height: 48,
               "& .MuiInputLabel-root": {
                 fontSize: "16px",
+                mt: "-4px",
               },
             },
           },
