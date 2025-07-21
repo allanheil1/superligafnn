@@ -1,4 +1,3 @@
-// src/components/TradeCard.tsx
 import React from "react";
 import { Box, Card, CardHeader, CardContent, Typography } from "@mui/material";
 import { TradeCardData } from "../hooks/useSuperLigaData";

@@ -1,14 +1,17 @@
-// src/hooks/useSuperLigaData.ts
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import Papa from "papaparse";
 import { GridColDef } from "@mui/x-data-grid";
 import { useSleeperApi } from "../hooks/useSleeperApi";
 import { Ligas, LeagueInfo } from "../ligas";
 import { LeagueUser, Roster, Transaction, Matchup, PlayerMap } from "../api/sleeper/types";
 import { useSnackbarContext } from "../context/SnackbarContext";
+import { getSlpChange } from "../../public/data/SLPrules";
 
 export type TableSuperLigaRow = {
   id: string;
   league: string;
+  initial_slp: number;
+  current_slp: number;
   team: string;
   user_id: string;
   user_name: string;
@@ -48,7 +51,29 @@ export const useSuperLigaData = () => {
   const [tradeCards, setTradeCards] = useState<TradeCardData[]>([]);
   const [tradesLoaded, setTradesLoaded] = useState(false);
 
-  // Memoização do array de ligas
+  const [initialSlpMap, setInitialSlpMap] = useState<Record<string, number>>({});
+
+  // Carrega CSV de SLP inicial
+  useEffect(() => {
+    Papa.parse<Record<string, string>>("/data/SLPinicial2025.csv", {
+      download: true,
+      header: true,
+      complete: (results) => {
+        const map: Record<string, number> = {};
+        results.data.forEach((rec) => {
+          const userId = rec["USER ID"];
+          const slpStr = rec["SLP INICIAL"];
+          if (userId && slpStr) {
+            map[userId] = Number(slpStr);
+          }
+        });
+        setInitialSlpMap(map);
+        console.log(map);
+      },
+    });
+  }, []);
+
+  // Array de LeagueInfo para cruzamento de dados
   const leagueInfos = useMemo<LeagueInfo[]>(() => {
     const infos: LeagueInfo[] = [];
     for (let i = 9; i <= 88; i++) {
@@ -189,15 +214,31 @@ export const useSuperLigaData = () => {
         return rosters.map((r) => {
           const rid = String(r.roster_id);
           const user = users.find((u) => u.user_id === r.owner_id);
+          const userId = user?.user_id ?? "";
+          const slpInitial = initialSlpMap[userId] ?? 0;
           const txCount = transactionCounts[lid]?.[rid] ?? { trades: 0, waivers: 0 };
-          const scores = matchupScores[lid]?.[rid] || {};
-          const weekly = Object.fromEntries(
-            Array.from({ length: 18 }, (_, i) => {
-              const wk = i + 1;
-              const sc = scores[wk];
-              return [`week_${wk}`, sc ? `${sc.points.toFixed(2)}${sc.result}` : "Bye"];
-            })
-          );
+          const scoresForLeague: Record<string, Record<number, { points: number; result: "W" | "L" | "T" }>> = matchupScores[
+            lid
+          ] || {};
+          const scoresForRoster = scoresForLeague[rid] || {};
+
+          const weekly: Record<string, string> = {};
+          let currentSlp = slpInitial;
+          for (let wk = 1; wk <= 18; wk++) {
+            const sc = scoresForRoster[wk];
+            if (!sc) {
+              weekly[`week_${wk}`] = "Bye";
+              continue;
+            }
+            const pts = sc.points;
+            const res = sc.result;
+            const delta = getSlpChange(currentSlp, res);
+            currentSlp += delta;
+
+            const sign = delta > 0 ? `+${delta}` : `${delta}`;
+            weekly[`week_${wk}`] = `${pts.toFixed(2)} (${res}) - ${currentSlp} (${sign})`;
+          }
+
           return {
             id: `${lid}-${rid}`,
             league: info.name,
@@ -210,6 +251,8 @@ export const useSuperLigaData = () => {
             pt: r.settings?.fpts_against || 0,
             trades: txCount.trades,
             waivers: txCount.waivers,
+            initial_slp: slpInitial,
+            current_slp: currentSlp,
             ...weekly,
           };
         });
@@ -231,7 +274,6 @@ export const useSuperLigaData = () => {
     if (newTab === "trades") {
       openLoading();
       try {
-        // carrega (e guarda) os players apenas se ainda não tiver
         let playersMap = allPlayersNFL;
         if (!playersMap) {
           playersMap = await api.fetchAllPlayers();
@@ -294,15 +336,46 @@ export const useSuperLigaData = () => {
   }, [rows, appliedFilterText]);
 
   const staticColumns: GridColDef<TableSuperLigaRow>[] = [
-    { field: "league", headerName: "Liga", width: 200 },
-    { field: "team", headerName: "Time", width: 200 },
-    { field: "user_name", headerName: "Nome Jogador", width: 150 },
+    { field: "league", headerName: "Liga", width: 200, headerAlign: "left", align: "left" },
+    { field: "initial_slp", headerName: "SLP Inicial", width: 120, type: "number", headerAlign: "left", align: "left" },
+    {
+      field: "current_slp",
+      headerName: "SLP Atual",
+      headerAlign: "left",
+      align: "left",
+      width: 140,
+      renderCell: (params) => {
+        const current = params.value as number;
+        const initial = (params.row as TableSuperLigaRow).initial_slp;
+        const delta = current - initial;
+        const deltaText = delta >= 0 ? `+${delta}` : `${delta}`;
+
+        let styledDelta: React.ReactNode;
+        if (delta > 0) {
+          styledDelta = <strong style={{ color: "green" }}>{deltaText}</strong>;
+        } else if (delta < 0) {
+          styledDelta = <strong style={{ color: "red" }}>{deltaText}</strong>;
+        } else {
+          styledDelta = <span>{deltaText}</span>;
+        }
+
+        return (
+          <span>
+            {current} ({styledDelta})
+          </span>
+        );
+      },
+    },
+    { field: "team", headerName: "Time", width: 200, headerAlign: "left", align: "left" },
+    { field: "user_name", headerName: "Nome Jogador", width: 150, headerAlign: "left", align: "left" },
     {
       field: "wins",
       headerName: "Vitórias",
       width: 120,
       type: "number",
       renderCell: (params) => <strong style={{ color: "green" }}>{params.value}</strong>,
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "losses",
@@ -310,11 +383,13 @@ export const useSuperLigaData = () => {
       width: 120,
       type: "number",
       renderCell: (params) => <strong style={{ color: "red" }}>{params.value}</strong>,
+      headerAlign: "left",
+      align: "left",
     },
-    { field: "pf", headerName: "PF", width: 120, type: "number" },
-    { field: "pt", headerName: "PT", width: 120, type: "number" },
-    { field: "waivers", headerName: "Waivers", width: 100, type: "number" },
-    { field: "trades", headerName: "Trades", width: 100, type: "number" },
+    { field: "pf", headerName: "PF", width: 120, type: "number", headerAlign: "left", align: "left" },
+    { field: "pt", headerName: "PT", width: 120, type: "number", headerAlign: "left", align: "left" },
+    { field: "waivers", headerName: "Waivers", width: 100, type: "number", headerAlign: "left", align: "left" },
+    { field: "trades", headerName: "Trades", width: 100, type: "number", headerAlign: "left", align: "left" },
   ];
 
   const weeklyScoreColumns: GridColDef<TableSuperLigaRow>[] = [];
@@ -322,25 +397,37 @@ export const useSuperLigaData = () => {
     weeklyScoreColumns.push({
       field: `week_${week}`,
       headerName: `W${week}`,
-      width: 100,
+      width: 160,
       sortable: true,
       sortComparator: (v1, v2) => {
-        const parseScore = (val: any): number => {
-          const match = String(val).match(/^(\d+\.\d{2})/);
-          return match ? parseFloat(match[1]) : 0;
-        };
-        return parseScore(v1) - parseScore(v2);
+        const m1 = String(v1).match(/^([\d.]+)/);
+        const m2 = String(v2).match(/^([\d.]+)/);
+        return parseFloat(m1?.[1] || "0") - parseFloat(m2?.[1] || "0");
       },
       renderCell: (params) => {
         const raw = String(params.value);
-        const m = raw.match(/^(\d+\.\d{2})([WLT])$/);
+        const m = raw.match(/^([\d.]+)\s*\(([WLT])\)\s*[-–]\s*(\d+)\s*\(([+-]?\d+)\)$/);
         if (!m) return raw;
-        const [_, pts, res] = m;
-        const color = res === "W" ? "green" : res === "L" ? "red" : "gray";
+        const [, pts, res, curr, delta] = m;
+        const colorRes = res === "W" ? "green" : res === "L" ? "red" : "gray";
+        const colorDelta = delta.startsWith("+") ? "green" : "red";
+
         return (
-          <span>
-            {pts} <strong style={{ color }}>({res})</strong>
-          </span>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              lineHeight: 1.2,
+              marginTop: 10,
+            }}
+          >
+            <span>
+              {pts} (<strong style={{ color: colorRes }}>{res}</strong>)
+            </span>
+            <span>
+              SLP: {curr} (<strong style={{ color: colorDelta }}>{delta}</strong>)
+            </span>
+          </div>
         );
       },
     });

@@ -1,4 +1,4 @@
-// src/components/AbaTrades.tsx
+"use client";
 import React from "react";
 import { Box } from "@mui/material";
 import TradeCard from "./TradeCard";

@@ -1,4 +1,4 @@
-// src/components/AbaGeral.tsx
+"use client";
 import React from "react";
 import { Box, Button } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -28,7 +28,15 @@ const AbaGeral: React.FC<AbaGeralProps> = ({
     </Button>
     <SearchInput onApply={(text) => setAppliedFilterText(text)} />
     <Box mt={2} sx={{ height: "75vh", width: "100%" }}>
-      {hasMounted && <DataGrid rows={filteredRows} columns={columns} loading={isLoading} getRowId={(row) => row.id} />}
+      {hasMounted && (
+        <DataGrid
+          rows={filteredRows}
+          columns={columns}
+          loading={isLoading}
+          getRowId={(row) => row.id}
+          pageSizeOptions={[12, 50, 100]}
+        />
+      )}
     </Box>
   </>
 );

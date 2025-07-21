@@ -1,4 +1,3 @@
-// src/pages/SuperLigaPage.tsx
 "use client";
 import React from "react";
 import { Box, Typography, Tabs, Tab } from "@mui/material";
